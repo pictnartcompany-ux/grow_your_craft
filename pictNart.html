@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PictNart Web – Drawing Editor</title>
+  <style>
+    :root{
+      --bg:#0f172a; --panel:#111827; --panel-2:#0b1220; --text:#e5e7eb; --muted:#94a3b8;
+      --accent:#22c55e; --border:#1f2937; --card:#0b1220; --warn:#f59e0b; --danger:#ef4444; --blue:#3b82f6;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; background:linear-gradient(180deg,#0b1220,#0a0f1a); color:var(--text);
+      font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial; overflow:hidden;}
+    .app{display:grid; grid-template-columns:260px 1fr 340px; grid-template-rows:auto 1fr; height:100%}
+    header{grid-column:1/4; display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:12px 16px; background:rgba(11,18,32,0.7); backdrop-filter: blur(10px); border-bottom:1px solid var(--border);}
+    header .brand{display:flex; align-items:center; gap:10px; font-weight:700}
+    header .brand .logo{width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,#22c55e,#3b82f6)}
+    header .actions{display:flex; gap:8px; flex-wrap:wrap}
+    .btn{appearance:none; border:1px solid var(--border); background:var(--panel); color:var(--text); padding:8px 12px; border-radius:10px; cursor:pointer}
+    .btn:hover{border-color:#2c3e55}
+    .btn.primary{background:linear-gradient(135deg,#1b7d46,#2563eb); border-color:transparent}
+    .btn.ghost{background:transparent}
+    .sidebar,.props{padding:12px; border-right:1px solid var(--border); background:rgba(13,20,36,0.6)}
+    .props{border-right:0; border-left:1px solid var(--border)}
+    .section{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:12px; margin-bottom:12px}
+    .section h3{margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted)}
+    .tool-list{display:grid; grid-template-columns:repeat(2,1fr); gap:10px}
+    .tool{display:flex; flex-direction:column; align-items:center; gap:6px; padding:10px; border-radius:12px; border:1px dashed #263244; background:var(--card); user-select:none}
+    .tool[draggable="true"]{cursor:grab}
+    .tool .icon{width:40px; height:40px; display:grid; place-items:center; border-radius:10px; background:#0f1a2b; border:1px solid #1f2b3f; font-size:20px}
+    .hint{font-size:12px; color:var(--muted)}
+    .canvas-wrap{position:relative; padding:12px}
+    .stage{width:100%; height:100%; background:#0b1220; border:1px solid var(--border); border-radius:14px; overflow:hidden; position:relative}
+    svg#stage{width:100%; height:100%; background-image: radial-gradient(#101b2e 1px, transparent 1px),radial-gradient(#101b2e 1px, transparent 1px);
+      background-position:0 0,10px 10px; background-size:20px 20px;}
+    .statusbar{grid-column:1/4; padding:6px 12px; color:#9aa7bd; background:rgba(11,18,32,0.7); border-top:1px solid var(--border); font-size:12px}
+    .row{display:flex; gap:8px; align-items:center}
+    .row + .row{margin-top:8px}
+    .field{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+    .field label{font-size:12px; color:var(--muted)}
+    input[type="color"],input[type="number"],input[type="range"],input[type="text"],input[type="file"]{width:100%; background:#0a1323; border:1px solid #1f2b3f; color:var(--text); border-radius:8px; padding:6px}
+    input[type="range"]{height:28px}
+    .stack{display:grid; gap:6px}
+    .badges{display:flex; flex-wrap:wrap; gap:6px}
+    .badge{font-size:11px; padding:4px 8px; border-radius:999px; background:#0e1a2b; border:1px solid #1f2b3f; color:#a3b1c7}
+    .selected-box{pointer-events:none; position:absolute; border:1px dashed #60a5fa; outline:600px solid rgba(59,130,246,0.05);}
+    .handle{position:absolute; width:10px; height:10px; background:#22c55e; border:2px solid #081220; border-radius:50%; pointer-events:auto}
+    .hidden{display:none}
+    .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; font-size:11px; background:#0e1a2b; padding:2px 6px; border-radius:6px; border:1px solid #1f2b3f}
+    .modal{display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;}
+    .modal-content{background:var(--panel); padding:20px; border-radius:14px; max-width:520px; width:90%; border:1px solid var(--border);}
+    .modal-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:20px;}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand"><div class="logo"></div> PictNart Web <span class="badge">deploy</span></div>
+      <div class="actions">
+        <button class="btn" id="btn-new" title="Reset (⌘/Ctrl+N)">New</button>
+        <button class="btn" id="btn-load">Open a project</button>
+        <button class="btn" id="btn-save">Save project (.json)</button>
+        <button class="btn" id="btn-delete">Delete</button>
+        <button class="btn primary" id="export-btn">Export PNG</button>
+        <button class="btn ghost" id="btn-export-svg">Export SVG</button>
+      </div>
+    </header>
+
+    <aside class="sidebar">
+      <div class="section">
+        <h3>Tools (drag & click)</h3>
+        <div class="tool-list">
+          <div class="tool" draggable="true" data-kind="rect"><div class="icon">▭</div><div>Rectangle</div></div>
+          <div class="tool" draggable="true" data-kind="ellipse"><div class="icon">◯</div><div>Ellipse</div></div>
+          <div class="tool" draggable="true" data-kind="text"><div class="icon">T</div><div>Text</div></div>
+          <label class="tool" for="img-input"><div class="icon">🖼</div><div>Image</div></label>
+          <div class="tool" draggable="true" data-kind="path" id="tool-draw"><div class="icon">✏️</div><div>Brush</div></div>
+          <div class="tool" id="tool-smart">
+            <div class="icon">✨</div><div>Smart</div>
+            <div class="mini-controls">
+              <div class="row"><input type="color" id="smart-color-tool" value="#ffffff" title="Target color"/></div>
+              <div class="row"><input type="range" id="smart-tol-tool" min="0" max="96" step="2" value="24" title="Tolerance"/></div>
+              <div class="row"><button class="btn" id="btn-smart-tool" title="Select the closest element">Select</button></div>
+            </div>
+          </div>
+          <input id="img-input" type="file" accept="image/*" class="hidden" />
+        </div>
+        <p class="hint">Tip: you can also <b>click</b> a tool to add it to the center.</p>
+      </div>
+      <div class="section">
+        <h3>Shortcuts</h3>
+        <div class="badges">
+          <span class="badge"><span class="kbd">⌘ / Ctrl</span> + <span class="kbd">S</span> Export PNG</span>
+          <span class="badge"><span class="kbd">Delete</span> Delete selection</span>
+          <span class="badge"><span class="kbd">⇧</span> keep aspect ratio</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="canvas-wrap">
+      <div class="stage" id="stage-wrap">
+        <svg id="stage" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+          <defs id="defs"></defs>
+        </svg>
+        <div id="selection" class="selected-box hidden"></div>
+        <div id="h-nw" class="handle hidden"></div>
+        <div id="h-ne" class="handle hidden"></div>
+        <div id="h-sw" class="handle hidden"></div>
+        <div id="h-se" class="handle hidden"></div>
+      </div>
+    </main>
+
+    <aside class="props">
+      <div class="section">
+        <h3>Properties</h3>
+        <div class="stack">
+          <div class="field"><label>Fill</label><input type="color" id="fill" value="#ffffff"/></div>
+          <div class="field"><label>Stroke</label><input type="color" id="stroke" value="#1e1e1e"/></div>
+          <div class="field"><label>Thickness</label><input type="number" id="strokeWidth" min="0" max="40" step="0.5" value="2"/></div>
+          <div class="field"><label>Opacity</label><input type="range" id="opacity" min="0" max="1" step="0.01" value="1"/></div>
+          <div class="field" id="textRow" style="display:none"><label>Text</label><input type="text" id="textValue" placeholder="Your text"/></div>
+        </div>
+      </div>
+      <div class="section">
+        <h3>Effects</h3>
+        <div class="stack">
+          <div class="row"><input type="checkbox" id="ef-shadow" /><label for="ef-shadow">Drop shadow / Glow</label></div>
+          <div class="field"><label>Blur</label><input type="range" id="shadow-blur" min="0" max="40" step="1" value="20"/></div>
+          <div class="field"><label>Offset X</label><input type="number" id="shadow-dx" value="10" step="1" /></div>
+          <div class="field"><label>Offset Y</label><input type="number" id="shadow-dy" value="10" step="1" /></div>
+          <div class="field"><label>Color</label><input type="color" id="shadow-color" value="#000000" /></div>
+
+          <div class="row" style="margin-top:8px"><input type="checkbox" id="ef-blur" /><label for="ef-blur">Blur</label></div>
+          <div class="field"><label>Radius</label><input type="range" id="blur-radius" min="0" max="20" step="0.5" value="6"/></div>
+
+          <div class="row" style="margin-top:8px"><input type="checkbox" id="ef-tint" /><label for="ef-tint">Tint (colorize)</label></div>
+          <div class="field"><label>Color</label><input type="color" id="tint-color" value="#ff0080" /></div>
+          <div class="field"><label>Strength</label><input type="range" id="tint-strength" min="0" max="1" step="0.05" value="0.6"/></div>
+        </div>
+        <p class="hint">Browser limitation: one filter per element. Use Export to "flatten" the effect.</p>
+      </div>
+      <div class="section">
+        <h3>Project</h3>
+        <div class="row">
+          <button class="btn" id="btn-local-save">Local save</button>
+          <button class="btn" id="btn-local-load">Restore</button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="statusbar" id="status">Ready.</div>
+  </div>
+
+  <!-- Reusable modal -->
+  <div id="nft-modal" class="modal">
+    <div class="modal-content">
+      <h3 id="nft-title">Premium access required</h3>
+      <p id="nft-line1"></p>
+      <p id="nft-line2"></p>
+      <div class="modal-actions" id="nft-actions"></div>
+    </div>
+  </div>
+
+  <script type="module">
+
+    const $ = sel => document.querySelector(sel);
+    const stage = $('#stage');
+    const defs = $('#defs');
+    const status = $('#status');
+    const wrap = $('#stage-wrap');
+
+    let uid = 1;
+    const genId = (pfx='item') => `${pfx}-${uid++}`;
+
+    const state = { items: [], selected: null, drawing: null };
+
+    function setStatus(txt){ status.textContent = txt; }
+
+    function download(filename, content, mime='application/octet-stream'){
+      const blob = new Blob([content], {type:mime});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
+    }
+
+    function serialize(){ return JSON.stringify({items: state.items}, null, 2); }
+    function deserialize(json){
+      try{ const data = JSON.parse(json); loadFromData(data); }
+      catch(e){ alert('Invalid project file'); }
+    }
+
+    function createSvg(tag, attrs={}){
+      const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      for(const k in attrs){ el.setAttribute(k, attrs[k]); }
+      return el;
+    }
+
+    function applyEffects(el, eff){
+      el.removeAttribute('filter');
+      if(!eff) return;
+      const fid = genId('f');
+      let filter = createSvg('filter', {id: fid, x: '-50%', y:'-50%', width:'200%', height:'200%'});
+      if(eff.kind === 'shadow'){
+        const fe = createSvg('feDropShadow', {
+          'dx': eff.dx || 0, 'dy': eff.dy || 0, 'stdDeviation': eff.blur || 0,
+          'flood-color': eff.color || '#000000','flood-opacity': (eff.opacity ?? 0.9)
+        });
+        filter.appendChild(fe);
+      } else if(eff.kind === 'blur'){
+        const fe = createSvg('feGaussianBlur', { stdDeviation: eff.radius || 2 });
+        fe.setAttribute('in', 'SourceGraphic');
+        filter.appendChild(fe);
+      } else if(eff.kind === 'tint'){
+        const flood = createSvg('feFlood', { 'flood-color': eff.color || '#ff0080', 'flood-opacity': eff.strength || 0.5, result:'flood'});
+        const comp = createSvg('feComposite', { in:'flood', in2:'SourceGraphic', operator:'atop', result:'tinted' });
+        const merge = createSvg('feMerge', {}); merge.appendChild(createSvg('feMergeNode', {in:'tinted'}));
+        filter.appendChild(flood); filter.appendChild(comp); filter.appendChild(merge);
+      }
+      defs.appendChild(filter);
+      el.setAttribute('filter', `url(#${fid})`);
+    }
+
+    function addItem(kind, x=400, y=240){
+      const id = genId();
+      let rec = { id, type:kind, x, y, w:200, h:140, rx:16, ry:16, fill:'#ffffff', stroke:'#1e1e1e', strokeWidth:2, opacity:1 };
+      let el;
+      if(kind==='rect'){
+        el = createSvg('rect', {x, y, width:rec.w, height:rec.h, rx:rec.rx, ry:rec.ry, fill:rec.fill, stroke:rec.stroke, 'stroke-width':rec.strokeWidth, opacity:rec.opacity});
+      } else if(kind==='ellipse'){
+        rec = {...rec, w:160, h:160};
+        el = createSvg('ellipse', {cx:x+rec.w/2, cy:y+rec.h/2, rx:rec.w/2, ry:rec.h/2, fill:rec.fill, stroke:rec.stroke, 'stroke-width':rec.strokeWidth, opacity:rec.opacity});
+      } else if(kind==='text'){
+        rec = {...rec, text:'Double-click', w:260, h:40};
+        el = createSvg('text', {x, y:y+24, 'font-size':24, fill:rec.stroke}); el.textContent = rec.text;
+      } else if(kind==='image'){
+        rec = {...rec, w:240, h:180, imgHref:''};
+        el = createSvg('image', {x, y, width:rec.w, height:rec.h, href:''});
+      } else if(kind==='path'){
+        rec = {...rec, w:0, h:0, fill:'none', stroke:'#1e1e1e', strokeWidth:2, d:''};
+        el = createSvg('path', {d:'', fill:'none', stroke:rec.stroke, 'stroke-width':rec.strokeWidth, 'stroke-linecap':'round', 'stroke-linejoin':'round'});
+      }
+      el.dataset.id = id; stage.appendChild(el); state.items.push(rec); selectById(id); autosave(); return rec;
+    }
+
+    const selBox = $('#selection');
+    const handles = { nw:$('#h-nw'), ne:$('#h-ne'), sw:$('#h-sw'), se:$('#h-se') };
+
+    function bboxOf(rec){
+      const el = stage.querySelector(`[data-id="${rec.id}"]`);
+      if(!el) return {x:rec.x||0, y:rec.y||0, w:rec.w||0, h:rec.h||0};
+      try{ const bb = el.getBBox(); return {x:bb.x, y:bb.y, w:bb.width, h:bb.height}; }
+      catch{ if(rec.type==='ellipse') return {x:rec.x, y:rec.y, w:rec.w, h:rec.h};
+             if(rec.type==='text') return {x:rec.x, y:rec.y-24, w:rec.w, h:rec.h};
+             return {x:rec.x, y:rec.y, w:rec.w, h:rec.h}; }
+    }
+
+    function updateElementFromRec(rec){
+      const el = stage.querySelector(`[data-id="${rec.id}"]`); if(!el) return;
+      el.setAttribute('opacity', rec.opacity);
+      if(rec.type==='rect'){
+        el.setAttribute('x', rec.x); el.setAttribute('y', rec.y);
+        el.setAttribute('width', rec.w); el.setAttribute('height', rec.h);
+        el.setAttribute('rx', rec.rx); el.setAttribute('ry', rec.ry);
+        el.setAttribute('fill', rec.fill); el.setAttribute('stroke', rec.stroke); el.setAttribute('stroke-width', rec.strokeWidth);
+      } else if(rec.type==='ellipse'){
+        el.setAttribute('cx', rec.x + rec.w/2); el.setAttribute('cy', rec.y + rec.h/2);
+        el.setAttribute('rx', rec.w/2); el.setAttribute('ry', rec.h/2);
+        el.setAttribute('fill', rec.fill); el.setAttribute('stroke', rec.stroke); el.setAttribute('stroke-width', rec.strokeWidth);
+      } else if(rec.type==='text'){
+        el.setAttribute('x', rec.x); el.setAttribute('y', rec.y); el.setAttribute('fill', rec.stroke); el.textContent = rec.text ?? '';
+      } else if(rec.type==='image'){
+        el.setAttribute('x', rec.x); el.setAttribute('y', rec.y);
+        el.setAttribute('width', rec.w); el.setAttribute('height', rec.h);
+        if(rec.imgHref) el.setAttribute('href', rec.imgHref);
+      } else if(rec.type==='path'){
+        el.setAttribute('d', rec.d||''); el.setAttribute('stroke', rec.stroke); el.setAttribute('stroke-width', rec.strokeWidth); el.setAttribute('fill','none');
+      }
+      applyEffects(el, rec.effects);
+    }
+
+    function selectById(id){
+      state.selected = id;
+      const rec = state.items.find(i=>i.id===id); if(!rec){ clearSelection(); return; }
+      updateElementFromRec(rec);
+      const bb = bboxOf(rec);
+      selBox.classList.remove('hidden');
+      for(const k in handles) handles[k].classList.toggle('hidden', rec.type==='path');
+      selBox.style.left = bb.x + 'px'; selBox.style.top = bb.y + 'px';
+      selBox.style.width = bb.w + 'px'; selBox.style.height = bb.h + 'px';
+      positionHandles(bb);
+      syncUI(rec);
+      setStatus(`Selected: ${rec.type} (${Math.round(bb.x)}, ${Math.round(bb.y)})`);
+    }
+
+    function clearSelection(){
+      state.selected = null; selBox.classList.add('hidden');
+      for(const k in handles) handles[k].classList.add('hidden'); setStatus('No selection');
+    }
+
+    function positionHandles(bb){
+      const s=5;
+      handles.nw.style.left = (bb.x - s) + 'px'; handles.nw.style.top = (bb.y - s) + 'px';
+      handles.ne.style.left = (bb.x + bb.w - s) + 'px'; handles.ne.style.top = (bb.y - s) + 'px';
+      handles.sw.style.left = (bb.x - s) + 'px'; handles.sw.style.top = (bb.y + bb.h - s) + 'px';
+      handles.se.style.left = (bb.x + bb.w - s) + 'px'; handles.se.style.top = (bb.y + bb.h - s) + 'px';
+    }
+
+    let drag = null;
+
+    stage.addEventListener('pointerdown', (e)=>{
+      const toolIsDraw = stage.dataset.tool==='path';
+      if(toolIsDraw){
+        const r = stage.getBoundingClientRect();
+        const x = e.clientX - r.left; const y = e.clientY - r.top;
+        const rec = addItem('path'); rec.stroke = ui.stroke.value; rec.strokeWidth = parseFloat(ui.strokeWidth.value);
+        rec.d = `M ${x} ${y}`; updateElementFromRec(rec);
+        drag = {mode:'draw', rec, points:[x,y]}; e.preventDefault(); return;
+      }
+      if(e.target === stage) { clearSelection(); return; }
+      const el = e.target.closest('[data-id]'); if(!el) return;
+      const id = el.dataset.id; selectById(id);
+      const rec = state.items.find(r=>r.id===id); const bb = bboxOf(rec);
+      drag = { mode:'move', startX:e.clientX, startY:e.clientY, rec: {...rec}, box:bb }; e.preventDefault();
+    });
+
+    window.addEventListener('pointermove', (e)=>{
+      if(!drag) return;
+      const selRec = state.items.find(r=>r.id===state.selected);
+      if(drag.mode==='draw'){
+        const r = stage.getBoundingClientRect();
+        const x = e.clientX - r.left; const y = e.clientY - r.top;
+        drag.points.push(x,y); drag.rec.d += ` L ${x} ${y}`; updateElementFromRec(drag.rec); return;
+      }
+      if(!selRec) return;
+      if(drag.mode==='move'){
+        const dx = e.clientX - drag.startX; const dy = e.clientY - drag.startY;
+        if(selRec.type!=='path'){ selRec.x = drag.rec.x + dx; selRec.y = drag.rec.y + dy; }
+        else { const el = stage.querySelector(`[data-id="${selRec.id}"]`);
+               const tx = (drag.tx0||0) + dx; const ty = (drag.ty0||0) + dy; el.setAttribute('transform', `translate(${tx} ${ty})`); drag.tx0 = tx; drag.ty0 = ty; }
+        updateElementFromRec(selRec); const bb = bboxOf(selRec);
+        selBox.style.left = bb.x+'px'; selBox.style.top = bb.y+'px'; positionHandles(bb);
+      } else if(drag.mode==='resize'){
+        const dx = e.clientX - drag.startX; const dy = e.clientY - drag.startY;
+        const keep = e.shiftKey;
+        let w = drag.box.w, h = drag.box.h, x = drag.box.x, y = drag.box.y;
+        if(drag.handle==='se'){ w += dx; h += dy; }
+        if(drag.handle==='sw'){ w -= dx; h += dy; x += dx; }
+        if(drag.handle==='ne'){ w += dx; h -= dy; y += dy; }
+        if(drag.handle==='nw'){ w -= dx; h -= dy; x += dx; y += dy; }
+        w=Math.max(10,w); h=Math.max(10,h);
+        if(keep){ const ratio = drag.box.w/drag.box.h;
+          if(w/h>ratio) w=h*ratio; else h=w/ratio;
+          if(['sw','nw'].includes(drag.handle)) x = drag.box.x + (drag.box.w - w);
+          if(['ne','nw'].includes(drag.handle)) y = drag.box.y + (drag.box.h - h);
+        }
+        const selRec2 = selRec;
+        if(selRec2.type!=='path'){ selRec2.x = x; selRec2.y = y; selRec2.w = w; selRec2.h = h; }
+        updateElementFromRec(selRec2);
+        const bb = bboxOf(selRec2);
+        selBox.style.left = bb.x+'px'; selBox.style.top = bb.y+'px'; selBox.style.width = bb.w+'px'; selBox.style.height = bb.h+'px'; positionHandles(bb);
+      }
+    });
+
+    window.addEventListener('pointerup', ()=>{ if(drag){ if(drag.mode==='draw'){ autosave(); } drag=null; }});
+
+    for(const [name, el] of Object.entries(handles)){
+      el.addEventListener('pointerdown', (e)=>{
+        if(!state.selected) return; e.stopPropagation(); e.preventDefault();
+        const rec = state.items.find(r=>r.id===state.selected);
+        if(rec.type==='path') return;
+        drag = { mode:'resize', startX:e.clientX, startY:e.clientY, rec:{...rec}, handle:name, box:bboxOf(rec)};
+      })
+    }
+
+    wrap.addEventListener('pointerdown', (e)=>{
+      if(e.target.id==='stage' || e.target.id==='stage-wrap'){ clearSelection(); }
+    });
+
+    window.addEventListener('keydown', (e)=>{
+      if(e.key==='Delete' && state.selected){ removeSelected(); }
+      if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='n'){ e.preventDefault(); resetAll(); }
+      if(e.key==='Escape'){ stage.dataset.tool=''; setStatus('Ready.'); }
+    });
+
+    const ui = {
+      fill: $('#fill'), stroke: $('#stroke'), strokeWidth: $('#strokeWidth'), opacity: $('#opacity'),
+      textRow: $('#textRow'), textValue: $('#textValue'),
+      efShadow: $('#ef-shadow'), shBlur: $('#shadow-blur'), shDX: $('#shadow-dx'), shDY: $('#shadow-dy'), shColor: $('#shadow-color'),
+      efBlur: $('#ef-blur'), blurRadius: $('#blur-radius'),
+      efTint: $('#ef-tint'), tintColor: $('#tint-color'), tintStrength: $('#tint-strength'),
+      smartColorTool: $('#smart-color-tool'), smartTolTool: $('#smart-tol-tool')
+    };
+
+    function syncUI(rec){
+      ui.fill.value = rec.fill ?? '#ffffff';
+      ui.stroke.value = rec.stroke ?? '#1e1e1e';
+      ui.strokeWidth.value = rec.strokeWidth ?? 2;
+      ui.opacity.value = rec.opacity ?? 1;
+      const isText = rec.type==='text';
+      ui.textRow.style.display = isText ? '' : 'none';
+      if(isText) ui.textValue.value = rec.text || '';
+      const eff = rec.effects || null;
+      ui.efShadow.checked = eff?.kind==='shadow';
+      ui.efBlur.checked = eff?.kind==='blur';
+      ui.efTint.checked = eff?.kind==='tint';
+      if(eff?.kind==='shadow'){
+        ui.shBlur.value = eff.blur ?? 20; ui.shDX.value = eff.dx ?? 10; ui.shDY.value = eff.dy ?? 10; ui.shColor.value = eff.color ?? '#000000';
+      } else if(eff?.kind==='blur'){
+        ui.blurRadius.value = eff.radius ?? 6;
+      } else if(eff?.kind==='tint'){
+        ui.tintColor.value = eff.color ?? '#ff0080'; ui.tintStrength.value = eff.strength ?? 0.6;
+      }
+      ui.smartColorTool.value = (rec.type==='text' || rec.type==='path') ? (rec.stroke||'#ffffff') : (rec.fill||'#ffffff');
+    }
+
+    function updateSelected(mut){
+      const rec = state.items.find(r=>r.id===state.selected); if(!rec) return;
+      mut(rec); updateElementFromRec(rec);
+      const bb = bboxOf(rec);
+      selBox.style.left = bb.x+'px'; selBox.style.top = bb.y+'px'; selBox.style.width = bb.w+'px'; selBox.style.height = bb.h+'px'; positionHandles(bb);
+      autosave();
+    }
+
+    ui.fill.addEventListener('input', ()=> updateSelected(r=>{ if(r.type!=='text' && r.type!=='path') r.fill = ui.fill.value; }));
+    ui.stroke.addEventListener('input', ()=> updateSelected(r=>{ r.stroke = ui.stroke.value; }));
+    ui.strokeWidth.addEventListener('input', ()=> updateSelected(r=>{ r.strokeWidth = parseFloat(ui.strokeWidth.value); }));
+    ui.opacity.addEventListener('input', ()=> updateSelected(r=>{ r.opacity = parseFloat(ui.opacity.value); }));
+    ui.textValue.addEventListener('input', ()=> updateSelected(r=>{ if(r.type==='text'){ r.text = ui.textValue.value; r.w = Math.max(60, r.text.length*12); } }));
+
+    function setEffect(kind){
+      updateSelected(r=>{
+        if(!kind){ r.effects=null; return; }
+        if(kind==='shadow') r.effects = {kind:'shadow', blur: parseFloat(ui.shBlur.value), dx: parseFloat(ui.shDX.value), dy: parseFloat(ui.shDY.value), color: ui.shColor.value, opacity:0.9};
+        if(kind==='blur') r.effects = {kind:'blur', radius: parseFloat(ui.blurRadius.value)};
+        if(kind==='tint') r.effects = {kind:'tint', color: ui.tintColor.value, strength: parseFloat(ui.tintStrength.value)};
+      });
+    }
+
+    $('#ef-shadow').addEventListener('change', ()=>{ if($('#ef-shadow').checked){ $('#ef-blur').checked=false; $('#ef-tint').checked=false; setEffect('shadow'); } else setEffect(null); });
+    $('#ef-blur').addEventListener('change', ()=>{ if($('#ef-blur').checked){ $('#ef-shadow').checked=false; $('#ef-tint').checked=false; setEffect('blur'); } else setEffect(null); });
+    $('#ef-tint').addEventListener('change', ()=>{ if($('#ef-tint').checked){ $('#ef-shadow').checked=false; $('#ef-blur').checked=false; setEffect('tint'); } else setEffect(null); });
+
+    $('#shadow-blur').addEventListener('input', ()=> setEffect('shadow'));
+    $('#shadow-dx').addEventListener('input', ()=> setEffect('shadow'));
+    $('#shadow-dy').addEventListener('input', ()=> setEffect('shadow'));
+    $('#shadow-color').addEventListener('input', ()=> setEffect('shadow'));
+    $('#blur-radius').addEventListener('input', ()=> setEffect('blur'));
+    $('#tint-color').addEventListener('input', ()=> setEffect('tint'));
+    $('#tint-strength').addEventListener('input', ()=> setEffect('tint'));
+
+    $('#btn-export-svg').addEventListener('click', ()=>{
+      const svg = stage.cloneNode(true);
+      const txt = new XMLSerializer().serializeToString(svg);
+      download('pictnart.svg', txt, 'image/svg+xml');
+    });
+
+    function svgToPNG(callback){
+      const svg = stage.cloneNode(true);
+      const s = new XMLSerializer().serializeToString(svg);
+      const blob = new Blob([s], {type:'image/svg+xml'});
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = function(){
+        const r = stage.getBoundingClientRect();
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, r.width); canvas.height = Math.max(1, r.height);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        callback(canvas);
+      };
+      img.src = url;
+    }
+
+    function exportPNG(){
+      svgToPNG((canvas)=>{
+        canvas.toBlob((blob)=>{
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'pictnart.png';
+          document.body.appendChild(a); a.click();
+          setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
+        }, 'image/png');
+      });
+    }
+
+    function resetAll(){
+      state.items = []; state.selected=null; stage.innerHTML = '<defs id="defs"></defs>';
+      selBox.classList.add('hidden'); for(const k in handles) handles[k].classList.add('hidden');
+      autosave(); setStatus('New project');
+    }
+
+    $('#btn-new').addEventListener('click', resetAll);
+    $('#btn-save').addEventListener('click', ()=>{ download('pictnart_project.json', serialize(), 'application/json'); });
+    $('#btn-load').addEventListener('click', ()=>{
+      const inp = document.createElement('input'); inp.type='file'; inp.accept='.json';
+      inp.onchange = ()=>{ const f = inp.files[0]; if(!f) return; const r = new FileReader(); r.onload = ()=> deserialize(r.result); r.readAsText(f); };
+      inp.click();
+    });
+
+    $('#btn-delete').addEventListener('click', removeSelected);
+    function removeSelected(){
+      if(!state.selected) return;
+      const id = state.selected;
+      const el = stage.querySelector(`[data-id="${id}"]`);
+      el?.remove();
+      state.items = state.items.filter(i=>i.id!==id);
+      clearSelection(); autosave(); setStatus('Deleted.');
+    }
+
+    function autosave(){ try{ localStorage.setItem('pictnart_project', serialize()); }catch{} }
+    $('#btn-local-save').addEventListener('click', autosave);
+    $('#btn-local-load').addEventListener('click', ()=>{ try{ const j = localStorage.getItem('pictnart_project'); if(j) deserialize(j); }catch{} });
+
+    function loadFromData(data){
+      resetAll();
+      (data.items||[]).forEach(rec=>{
+        const id = rec.id || genId(); rec.id = id; state.items.push(rec);
+        let el;
+        if(rec.type==='rect') el = createSvg('rect');
+        if(rec.type==='ellipse') el = createSvg('ellipse');
+        if(rec.type==='text') el = createSvg('text');
+        if(rec.type==='image') el = createSvg('image');
+        if(rec.type==='path') el = createSvg('path');
+        el.dataset.id = id; stage.appendChild(el);
+        updateElementFromRec(rec);
+      });
+      autosave(); setStatus('Project loaded');
+    }
+
+    document.querySelectorAll('.tool[draggable="true"]').forEach(t=>{
+      t.addEventListener('dragstart',(e)=>{ e.dataTransfer.setData('text/plain', t.dataset.kind); });
+      t.addEventListener('click', ()=>{ const r = stage.getBoundingClientRect();
+        if(t.dataset.kind==='path'){ stage.dataset.tool='path'; setStatus('Drawing: click & drag on the canvas. Press Esc to exit.'); return; }
+        addItem(t.dataset.kind, r.width/2-80, r.height/2-60); stage.dataset.tool='';
+      });
+    });
+
+    wrap.addEventListener('dragover', e=>{ e.preventDefault(); });
+    wrap.addEventListener('drop', e=>{
+      const kind = e.dataTransfer.getData('text/plain'); if(!kind) return;
+      const r = stage.getBoundingClientRect();
+      const x = e.clientX - r.left - 80; const y = e.clientY - r.top - 60;
+      addItem(kind, x, y);
+    });
+
+    $('#img-input').addEventListener('change', (e)=>{
+      const f = e.target.files[0]; if(!f) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        addItem('image', 360, 200);
+        const rec = state.items.find(r=>r.id===state.selected);
+        rec.imgHref = reader.result; updateElementFromRec(rec); autosave();
+      };
+      reader.readAsDataURL(f); e.target.value='';
+    });
+
+    stage.addEventListener('click', (e)=>{
+      if(stage.dataset.tool==='path') return;
+      const el = e.target.closest('[data-id]'); if(el) selectById(el.dataset.id);
+    });
+
+    function hexToRgb(h){ const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h); if(!m) return [0,0,0];
+      return [parseInt(m[1],16), parseInt(m[2],16), parseInt(m[3],16)]; }
+    function colorDist(a,b){ return Math.sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2); }
+
+    function smartSelectWith(colorHex, tol){
+      const target = hexToRgb(colorHex); let best = null, bestD = Infinity;
+      state.items.forEach(rec=>{
+        let c = (rec.type==='text' || rec.type==='path') ? rec.stroke : (rec.fill || rec.stroke);
+        if(!c) return;
+        const d = colorDist(hexToRgb(c), target);
+        if(d < bestD && d <= tol){ bestD = d; best = rec; }
+      });
+      if(best){ selectById(best.id); setStatus(`Smart-selected ${best.type} (distance ${bestD.toFixed(1)})`); }
+      else setStatus('No element within tolerance');
+    }
+
+    $('#btn-smart-tool').addEventListener('click', ()=>{
+      const color = $('#smart-color-tool').value;
+      const tol = parseInt($('#smart-tol-tool').value,10);
+      smartSelectWith(color, tol);
+    });
+
+    addItem('rect', 200, 130);
+    addItem('ellipse', 520, 180);
+    addItem('text', 280, 380);
+
+    /* ===== 3-click Export PNG flow (robust wiring) ===== */
+    const OPENSEA_COLLECTION_URL = "https://opensea.io/collection/loufis-art";
+
+    function openNftModal({ title, line1, line2, buttons }){
+      const modal = document.getElementById('nft-modal');
+      const t = document.getElementById('nft-title');
+      const l1 = document.getElementById('nft-line1');
+      const l2 = document.getElementById('nft-line2');
+      const actions = document.getElementById('nft-actions');
+      if(!modal || !t || !l1 || !l2 || !actions){
+        alert(line1 + (line2?'\n'+line2:'')); return;
+      }
+      t.textContent = title || 'Premium access required';
+      l1.textContent = line1 || ''; l2.textContent = line2 || '';
+      actions.innerHTML = '';
+      (buttons||[]).forEach(b=>{
+        const btn = document.createElement('button');
+        btn.className = 'btn' + (b.primary ? ' primary' : '');
+        btn.textContent = b.text; btn.onclick = b.onClick;
+        actions.appendChild(btn);
+      });
+      modal.style.display = 'flex';
+    }
+    function closeNftModal(){ const modal = document.getElementById('nft-modal'); if(modal) modal.style.display = 'none'; }
+
+    function getAttempts(){ const v = localStorage.getItem('exportAttempts'); const n = parseInt(v||'0',10); return Number.isFinite(n)?n:0; }
+    function setAttempts(n){ try{ localStorage.setItem('exportAttempts', String(n)); }catch{} }
+    function isUnlocked(){ return localStorage.getItem('exportUnlocked')==='true'; }
+    function setUnlocked(){ try{ localStorage.setItem('exportUnlocked','true'); }catch{} }
+
+    function runExportFlow(ev){
+      if(ev){ ev.preventDefault(); ev.stopPropagation(); if(ev.stopImmediatePropagation) ev.stopImmediatePropagation(); }
+      if(isUnlocked()){ exportPNG(); return; }
+      const attempts = getAttempts();
+
+      if(attempts === 0){
+        openNftModal({
+          title: 'NFT gallery',
+          line1: "Before exporting the image, discover our partner artist’s NFTs.",
+          line2: "",
+          buttons: [
+            { text: "Open NFT shop", primary: true, onClick: () => { window.open(OPENSEA_COLLECTION_URL, '_blank', 'noopener'); setAttempts(1); closeNftModal(); } },
+            { text: "Cancel", primary: false, onClick: () => { closeNftModal(); } }
+          ]
+        });
+        return;
+      }
+
+      if(attempts === 1){
+        openNftModal({
+          title: 'Support our artists',
+          line1: "Subscribe to a low-cost NFT to support our partner’s artistic project.",
+          line2: "Alongside supporting our artists, you also encourage PictNart in developing an open-source project. After your purchase, click \"Export PNG\" again.",
+          buttons: [
+            { text: "I understand", primary: true, onClick: () => { setAttempts(2); closeNftModal(); } },
+            { text: "Cancel", primary: false, onClick: () => { closeNftModal(); } }
+          ]
+        });
+        return;
+      }
+
+      exportPNG();
+      setUnlocked();
+      setAttempts(3);
+      setTimeout(()=>alert("Thank you for your support!"), 60);
+    }
+
+    // Replace any previous listeners by cloning the button
+    (function wireExport(){
+      const oldBtn = document.getElementById('export-btn');
+      if(!oldBtn) return;
+      const newBtn = oldBtn.cloneNode(true);
+      oldBtn.replaceWith(newBtn);
+      newBtn.id = 'export-btn';
+      newBtn.addEventListener('click', runExportFlow, {capture:true});
+
+      // Ctrl/Cmd+S → same flow
+      window.addEventListener('keydown', (e)=>{
+        if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='s'){
+          runExportFlow(e);
+        }
+      }, {capture:true});
+    })();
+    
+  </script>
+</body>
+</html>
