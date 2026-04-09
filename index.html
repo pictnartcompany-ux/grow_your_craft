@@ -6,36 +6,53 @@
   <title>PictNart Web – Drawing Editor</title>
   <style>
     :root{
-      --bg:#0f172a; --panel:#111827; --panel-2:#0b1220; --text:#e5e7eb; --muted:#94a3b8;
-      --accent:#22c55e; --border:#1f2937; --card:#0b1220; --warn:#f59e0b; --danger:#ef4444; --blue:#3b82f6;
+      --bg:#071018; --panel:#111827; --panel-glass:rgba(15,23,42,.76); --panel-2:#0b1220;
+      --text:#edf2f7; --muted:#9fb1c7; --accent:#22c55e; --accent-2:#06b6d4;
+      --border:rgba(148,163,184,.22); --card:rgba(8,15,28,.86); --warn:#f59e0b; --danger:#ef4444; --blue:#3b82f6;
+      --paper:#eef3ff; --ink:#101827;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0; background:linear-gradient(180deg,#0b1220,#0a0f1a); color:var(--text);
-      font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial; overflow:hidden;}
+    body{margin:0; background:
+      radial-gradient(circle at top left,rgba(34,197,94,.18),transparent 34%),
+      radial-gradient(circle at 85% 10%,rgba(6,182,212,.18),transparent 28%),
+      linear-gradient(180deg,#0b1220,#050914);
+      color:var(--text);
+      font:14px/1.4 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial; overflow:hidden;}
     .app{display:grid; grid-template-columns:260px 1fr 340px; grid-template-rows:auto 1fr; height:100%}
     header{grid-column:1/4; display:flex; align-items:center; justify-content:space-between; gap:12px;
-      padding:12px 16px; background:rgba(11,18,32,0.7); backdrop-filter: blur(10px); border-bottom:1px solid var(--border);}
-    header .brand{display:flex; align-items:center; gap:10px; font-weight:700}
-    header .brand .logo{width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,#22c55e,#3b82f6)}
+      padding:12px 16px; background:rgba(5,10,20,0.72); backdrop-filter: blur(16px); border-bottom:1px solid var(--border);
+      box-shadow:0 18px 44px rgba(0,0,0,.22);}
+    header .brand{display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.02em}
+    header .brand .logo{width:32px; height:32px; border-radius:11px; background:
+      conic-gradient(from 210deg,#22c55e,#06b6d4,#3b82f6,#f59e0b,#22c55e);
+      box-shadow:0 0 24px rgba(34,197,94,.38);}
     header .actions{display:flex; gap:8px; flex-wrap:wrap}
-    .btn{appearance:none; border:1px solid var(--border); background:var(--panel); color:var(--text); padding:8px 12px; border-radius:10px; cursor:pointer}
-    .btn:hover{border-color:#2c3e55}
-    .btn.primary{background:linear-gradient(135deg,#1b7d46,#2563eb); border-color:transparent}
+    .btn{appearance:none; border:1px solid var(--border); background:linear-gradient(180deg,#162033,#0c1423); color:var(--text); padding:8px 12px; border-radius:999px; cursor:pointer;
+      box-shadow:0 8px 18px rgba(0,0,0,.18); transition:transform .14s ease,border-color .14s ease,background .14s ease}
+    .btn:hover{border-color:#5ea5ff; transform:translateY(-1px)}
+    .btn.primary{background:linear-gradient(135deg,#16a34a,#0891b2,#2563eb); border-color:transparent}
     .btn.ghost{background:transparent}
-    .sidebar,.props{padding:12px; border-right:1px solid var(--border); background:rgba(13,20,36,0.6)}
+    .sidebar,.props{padding:12px; border-right:1px solid var(--border); background:linear-gradient(180deg,rgba(13,20,36,0.72),rgba(5,10,20,0.82)); overflow:auto}
     .props{border-right:0; border-left:1px solid var(--border)}
-    .section{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:12px; margin-bottom:12px}
-    .section h3{margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted)}
+    .section{background:var(--panel-glass); border:1px solid var(--border); border-radius:20px; padding:13px; margin-bottom:12px;
+      box-shadow:0 18px 36px rgba(0,0,0,.18)}
+    .section h3{margin:0 0 10px; font-size:11px; text-transform:uppercase; letter-spacing:.16em; color:#9fd7ff}
     .tool-list{display:grid; grid-template-columns:repeat(2,1fr); gap:10px}
-    .tool{display:flex; flex-direction:column; align-items:center; gap:6px; padding:10px; border-radius:12px; border:1px dashed #263244; background:var(--card); user-select:none}
+    .tool{display:flex; flex-direction:column; align-items:center; gap:6px; padding:10px; border-radius:16px; border:1px dashed rgba(148,163,184,.28); background:var(--card); user-select:none;
+      transition:transform .14s ease,border-color .14s ease,background .14s ease}
     .tool[draggable="true"]{cursor:grab}
-    .tool .icon{width:40px; height:40px; display:grid; place-items:center; border-radius:10px; background:#0f1a2b; border:1px solid #1f2b3f; font-size:20px}
+    .tool:hover,.tool.active{transform:translateY(-2px); border-color:#67e8f9; background:linear-gradient(180deg,#13233d,#0b1220)}
+    .tool .icon{width:42px; height:42px; display:grid; place-items:center; border-radius:14px; background:linear-gradient(135deg,#0f1a2b,#132a45); border:1px solid rgba(148,163,184,.22); font-size:20px}
     .hint{font-size:12px; color:var(--muted)}
-    .canvas-wrap{position:relative; padding:12px}
-    .stage{width:100%; height:100%; background:#0b1220; border:1px solid var(--border); border-radius:14px; overflow:hidden; position:relative}
-    svg#stage{width:100%; height:100%; background-image: radial-gradient(#101b2e 1px, transparent 1px),radial-gradient(#101b2e 1px, transparent 1px);
-      background-position:0 0,10px 10px; background-size:20px 20px;}
+    .canvas-wrap{position:relative; padding:18px; background:radial-gradient(circle at center,rgba(59,130,246,.12),transparent 42%)}
+    .stage{width:100%; height:100%; background:#0b1220; border:1px solid var(--border); border-radius:28px; overflow:hidden; position:relative;
+      box-shadow:0 34px 70px rgba(0,0,0,.34), inset 0 0 0 1px rgba(255,255,255,.04)}
+    svg#stage{width:100%; height:100%; background-color:#ecf2ff; background-image:
+      linear-gradient(rgba(16,24,39,.05) 1px, transparent 1px),
+      linear-gradient(90deg,rgba(16,24,39,.05) 1px, transparent 1px),
+      radial-gradient(circle at top right,rgba(6,182,212,.16),transparent 38%);
+      background-position:0 0; background-size:24px 24px,24px 24px,100% 100%;}
     .statusbar{grid-column:1/4; padding:6px 12px; color:#9aa7bd; background:rgba(11,18,32,0.7); border-top:1px solid var(--border); font-size:12px}
     .row{display:flex; gap:8px; align-items:center}
     .row + .row{margin-top:8px}
@@ -53,6 +70,68 @@
     .modal{display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;}
     .modal-content{background:var(--panel); padding:20px; border-radius:14px; max-width:520px; width:90%; border:1px solid var(--border);}
     .modal-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:20px;}
+    .layers{display:grid; gap:8px; max-height:220px; overflow:auto; padding-right:4px}
+    .layer{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:9px 10px; border-radius:14px; border:1px solid var(--border); background:var(--card); cursor:pointer}
+    .layer.selected{border-color:#67e8f9; background:#13233d}
+    .layer small{color:var(--muted); text-transform:capitalize}
+    .mini-actions{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+    .mobile-panel-btn,.mobile-panel-close,.mobile-panel-backdrop{display:none}
+
+    @media (max-width:900px){
+      html,body{height:100%; height:100dvh}
+      body{overscroll-behavior:none}
+      .app{grid-template-columns:1fr; grid-template-rows:auto minmax(0,1fr) auto; height:100dvh}
+      header{grid-column:1; align-items:flex-start; flex-direction:column; padding:10px 12px; gap:10px}
+      header .actions{width:100%; flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch}
+      header .actions .btn{flex:0 0 auto; min-height:42px; white-space:nowrap}
+      header .brand{font-size:15px}
+      .mobile-panel-btn{display:inline-flex}
+      .canvas-wrap{grid-row:2; padding:10px; min-height:0}
+      .stage{border-radius:22px; touch-action:none}
+      svg#stage{touch-action:none}
+      .statusbar{grid-column:1; grid-row:3; padding:8px 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+      .sidebar,.props{
+        position:fixed;
+        left:10px; right:10px; bottom:10px;
+        z-index:1200;
+        max-height:min(78dvh,680px);
+        border:1px solid var(--border);
+        border-radius:26px;
+        padding:14px;
+        transform:translateY(calc(100% + 24px));
+        transition:transform .22s ease;
+        box-shadow:0 34px 80px rgba(0,0,0,.48);
+      }
+      body.show-tools .sidebar,
+      body.show-props .props{transform:translateY(0)}
+      .mobile-panel-close{
+        display:flex;
+        width:100%;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:12px;
+        padding:12px 14px;
+      }
+      .mobile-panel-backdrop{
+        position:fixed;
+        inset:0;
+        z-index:1100;
+        background:rgba(2,6,23,.58);
+        backdrop-filter:blur(6px);
+      }
+      body.show-tools .mobile-panel-backdrop,
+      body.show-props .mobile-panel-backdrop{display:block}
+      .tool-list{grid-template-columns:repeat(4,minmax(72px,1fr)); overflow-x:auto; padding-bottom:4px}
+      .tool{min-height:92px; font-size:12px}
+      .tool .icon{width:44px; height:44px}
+      .props .section:last-child{margin-bottom:70px}
+      .field{grid-template-columns:minmax(82px,1fr) 1.35fr}
+      input[type="color"],input[type="number"],input[type="range"],input[type="text"],input[type="file"]{min-height:40px; font-size:16px}
+      .btn{min-height:42px}
+      .handle{width:22px; height:22px; border-width:4px}
+      .selected-box{border-width:2px}
+      .modal-content{max-height:88dvh; overflow:auto}
+    }
   </style>
 </head>
 <body>
@@ -60,6 +139,8 @@
     <header>
       <div class="brand"><div class="logo"></div> PictNart Web <span class="badge">deploy</span></div>
       <div class="actions">
+        <button class="btn mobile-panel-btn" id="btn-mobile-tools" type="button">Tools</button>
+        <button class="btn mobile-panel-btn" id="btn-mobile-props" type="button">Edit</button>
         <button class="btn" id="btn-new" title="Reset (⌘/Ctrl+N)">New</button>
         <button class="btn" id="btn-load">Open a project</button>
         <button class="btn" id="btn-save">Save project (.json)</button>
@@ -70,11 +151,17 @@
     </header>
 
     <aside class="sidebar">
+      <button class="btn mobile-panel-close" type="button" data-close-panel>
+        <span>Tools</span><span>Close ✕</span>
+      </button>
       <div class="section">
         <h3>Tools (drag & click)</h3>
         <div class="tool-list">
           <div class="tool" draggable="true" data-kind="rect"><div class="icon">▭</div><div>Rectangle</div></div>
           <div class="tool" draggable="true" data-kind="ellipse"><div class="icon">◯</div><div>Ellipse</div></div>
+          <div class="tool" draggable="true" data-kind="triangle"><div class="icon">△</div><div>Triangle</div></div>
+          <div class="tool" draggable="true" data-kind="star"><div class="icon">✦</div><div>Star</div></div>
+          <div class="tool" draggable="true" data-kind="line"><div class="icon">╱</div><div>Line</div></div>
           <div class="tool" draggable="true" data-kind="text"><div class="icon">T</div><div>Text</div></div>
           <label class="tool" for="img-input"><div class="icon">🖼</div><div>Image</div></label>
           <div class="tool" draggable="true" data-kind="path" id="tool-draw"><div class="icon">✏️</div><div>Brush</div></div>
@@ -95,6 +182,7 @@
         <div class="badges">
           <span class="badge"><span class="kbd">⌘ / Ctrl</span> + <span class="kbd">S</span> Export PNG</span>
           <span class="badge"><span class="kbd">Delete</span> Delete selection</span>
+          <span class="badge"><span class="kbd">⌘ / Ctrl</span> + <span class="kbd">D</span> Duplicate</span>
           <span class="badge"><span class="kbd">⇧</span> keep aspect ratio</span>
         </div>
       </div>
@@ -114,6 +202,9 @@
     </main>
 
     <aside class="props">
+      <button class="btn mobile-panel-close" type="button" data-close-panel>
+        <span>Edit</span><span>Close ✕</span>
+      </button>
       <div class="section">
         <h3>Properties</h3>
         <div class="stack">
@@ -122,6 +213,16 @@
           <div class="field"><label>Thickness</label><input type="number" id="strokeWidth" min="0" max="40" step="0.5" value="2"/></div>
           <div class="field"><label>Opacity</label><input type="range" id="opacity" min="0" max="1" step="0.01" value="1"/></div>
           <div class="field" id="textRow" style="display:none"><label>Text</label><input type="text" id="textValue" placeholder="Your text"/></div>
+          <div class="field" id="fontRow" style="display:none"><label>Font size</label><input type="number" id="fontSize" min="8" max="180" step="1" value="28"/></div>
+        </div>
+      </div>
+      <div class="section">
+        <h3>Selection actions</h3>
+        <div class="mini-actions">
+          <button class="btn" id="btn-duplicate">Duplicate</button>
+          <button class="btn" id="btn-bring-front">To front</button>
+          <button class="btn" id="btn-send-back">To back</button>
+          <button class="btn" id="btn-center">Center</button>
         </div>
       </div>
       <div class="section">
@@ -149,10 +250,17 @@
           <button class="btn" id="btn-local-load">Restore</button>
         </div>
       </div>
+      <div class="section">
+        <h3>Layers</h3>
+        <div class="layers" id="layers"></div>
+        <p class="hint">Top layer appears first. Click a row to select it.</p>
+      </div>
     </aside>
 
     <div class="statusbar" id="status">Ready.</div>
   </div>
+
+  <div id="mobile-panel-backdrop" class="mobile-panel-backdrop"></div>
 
   <!-- Reusable modal -->
   <div id="nft-modal" class="modal">
@@ -168,9 +276,9 @@
 
     const $ = sel => document.querySelector(sel);
     const stage = $('#stage');
-    const defs = $('#defs');
     const status = $('#status');
     const wrap = $('#stage-wrap');
+    const layersEl = $('#layers');
 
     let uid = 1;
     const genId = (pfx='item') => `${pfx}-${uid++}`;
@@ -178,6 +286,43 @@
     const state = { items: [], selected: null, drawing: null };
 
     function setStatus(txt){ status.textContent = txt; }
+
+    function isMobileLayout(){
+      return window.matchMedia('(max-width: 900px)').matches;
+    }
+
+    function closeMobilePanels(){
+      document.body.classList.remove('show-tools','show-props');
+    }
+
+    function openMobilePanel(panel){
+      document.body.classList.toggle('show-tools', panel === 'tools');
+      document.body.classList.toggle('show-props', panel === 'props');
+    }
+
+    function itemLabel(rec){
+      if(!rec) return 'Layer';
+      if(rec.type === 'text') return rec.text || 'Text';
+      if(rec.type === 'path') return 'Brush stroke';
+      return rec.type;
+    }
+
+    function refreshLayers(){
+      if(!layersEl) return;
+      layersEl.innerHTML = '';
+      [...state.items].slice().reverse().forEach((rec, idx)=>{
+        const row = document.createElement('div');
+        row.className = 'layer' + (rec.id === state.selected ? ' selected' : '');
+        row.innerHTML = `<span>${escapeText(itemLabel(rec))}</span><small>${state.items.length - idx}</small>`;
+        row.addEventListener('click', ()=> selectById(rec.id));
+        layersEl.appendChild(row);
+      });
+      if(!state.items.length) layersEl.innerHTML = '<div class="hint">No layer yet.</div>';
+    }
+
+    function escapeText(text){
+      return String(text).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+    }
 
     function download(filename, content, mime='application/octet-stream'){
       const blob = new Blob([content], {type:mime});
@@ -201,6 +346,32 @@
       return el;
     }
 
+    function ensureDefs(){
+      let defs = stage.querySelector('defs');
+      if(!defs){
+        defs = createSvg('defs', {id:'defs'});
+        stage.insertBefore(defs, stage.firstChild);
+      }
+      return defs;
+    }
+
+    function trianglePath(rec){
+      return `M ${rec.x + rec.w/2} ${rec.y} L ${rec.x + rec.w} ${rec.y + rec.h} L ${rec.x} ${rec.y + rec.h} Z`;
+    }
+
+    function starPath(rec){
+      const cx = rec.x + rec.w/2, cy = rec.y + rec.h/2;
+      const outer = Math.min(rec.w, rec.h) / 2;
+      const inner = outer * .45;
+      const pts = [];
+      for(let i=0;i<10;i++){
+        const a = -Math.PI/2 + i * Math.PI/5;
+        const rr = i % 2 ? inner : outer;
+        pts.push([cx + Math.cos(a)*rr, cy + Math.sin(a)*rr]);
+      }
+      return pts.map((p,i)=>`${i?'L':'M'} ${p[0]} ${p[1]}`).join(' ') + ' Z';
+    }
+
     function applyEffects(el, eff){
       el.removeAttribute('filter');
       if(!eff) return;
@@ -222,7 +393,7 @@
         const merge = createSvg('feMerge', {}); merge.appendChild(createSvg('feMergeNode', {in:'tinted'}));
         filter.appendChild(flood); filter.appendChild(comp); filter.appendChild(merge);
       }
-      defs.appendChild(filter);
+      ensureDefs().appendChild(filter);
       el.setAttribute('filter', `url(#${fid})`);
     }
 
@@ -235,9 +406,18 @@
       } else if(kind==='ellipse'){
         rec = {...rec, w:160, h:160};
         el = createSvg('ellipse', {cx:x+rec.w/2, cy:y+rec.h/2, rx:rec.w/2, ry:rec.h/2, fill:rec.fill, stroke:rec.stroke, 'stroke-width':rec.strokeWidth, opacity:rec.opacity});
+      } else if(kind==='triangle'){
+        rec = {...rec, w:190, h:170};
+        el = createSvg('path', {d:'', fill:rec.fill, stroke:rec.stroke, 'stroke-width':rec.strokeWidth, opacity:rec.opacity});
+      } else if(kind==='star'){
+        rec = {...rec, w:190, h:190};
+        el = createSvg('path', {d:'', fill:rec.fill, stroke:rec.stroke, 'stroke-width':rec.strokeWidth, opacity:rec.opacity, 'stroke-linejoin':'round'});
+      } else if(kind==='line'){
+        rec = {...rec, w:220, h:120, fill:'none', stroke:'#1e1e1e'};
+        el = createSvg('line', {x1:x, y1:y, x2:x+rec.w, y2:y+rec.h, stroke:rec.stroke, 'stroke-width':rec.strokeWidth, opacity:rec.opacity, 'stroke-linecap':'round'});
       } else if(kind==='text'){
-        rec = {...rec, text:'Double-click', w:260, h:40};
-        el = createSvg('text', {x, y:y+24, 'font-size':24, fill:rec.stroke}); el.textContent = rec.text;
+        rec = {...rec, text:'Double-click', w:260, h:44, fontSize:28};
+        el = createSvg('text', {x, y:y+rec.fontSize, 'font-size':rec.fontSize, fill:rec.stroke}); el.textContent = rec.text;
       } else if(kind==='image'){
         rec = {...rec, w:240, h:180, imgHref:''};
         el = createSvg('image', {x, y, width:rec.w, height:rec.h, href:''});
@@ -245,7 +425,7 @@
         rec = {...rec, w:0, h:0, fill:'none', stroke:'#1e1e1e', strokeWidth:2, d:''};
         el = createSvg('path', {d:'', fill:'none', stroke:rec.stroke, 'stroke-width':rec.strokeWidth, 'stroke-linecap':'round', 'stroke-linejoin':'round'});
       }
-      el.dataset.id = id; stage.appendChild(el); state.items.push(rec); selectById(id); autosave(); return rec;
+      el.dataset.id = id; stage.appendChild(el); state.items.push(rec); updateElementFromRec(rec); selectById(id); autosave(); refreshLayers(); return rec;
     }
 
     const selBox = $('#selection');
@@ -272,8 +452,20 @@
         el.setAttribute('cx', rec.x + rec.w/2); el.setAttribute('cy', rec.y + rec.h/2);
         el.setAttribute('rx', rec.w/2); el.setAttribute('ry', rec.h/2);
         el.setAttribute('fill', rec.fill); el.setAttribute('stroke', rec.stroke); el.setAttribute('stroke-width', rec.strokeWidth);
+      } else if(rec.type==='triangle'){
+        el.setAttribute('d', trianglePath(rec));
+        el.setAttribute('fill', rec.fill); el.setAttribute('stroke', rec.stroke); el.setAttribute('stroke-width', rec.strokeWidth);
+      } else if(rec.type==='star'){
+        el.setAttribute('d', starPath(rec));
+        el.setAttribute('fill', rec.fill); el.setAttribute('stroke', rec.stroke); el.setAttribute('stroke-width', rec.strokeWidth);
+      } else if(rec.type==='line'){
+        el.setAttribute('x1', rec.x); el.setAttribute('y1', rec.y);
+        el.setAttribute('x2', rec.x + rec.w); el.setAttribute('y2', rec.y + rec.h);
+        el.setAttribute('stroke', rec.stroke); el.setAttribute('stroke-width', rec.strokeWidth); el.setAttribute('fill','none');
+        el.setAttribute('stroke-linecap','round');
       } else if(rec.type==='text'){
-        el.setAttribute('x', rec.x); el.setAttribute('y', rec.y); el.setAttribute('fill', rec.stroke); el.textContent = rec.text ?? '';
+        rec.fontSize = rec.fontSize || 28;
+        el.setAttribute('x', rec.x); el.setAttribute('y', rec.y); el.setAttribute('font-size', rec.fontSize); el.setAttribute('fill', rec.stroke); el.textContent = rec.text ?? '';
       } else if(rec.type==='image'){
         el.setAttribute('x', rec.x); el.setAttribute('y', rec.y);
         el.setAttribute('width', rec.w); el.setAttribute('height', rec.h);
@@ -282,12 +474,14 @@
         el.setAttribute('d', rec.d||''); el.setAttribute('stroke', rec.stroke); el.setAttribute('stroke-width', rec.strokeWidth); el.setAttribute('fill','none');
       }
       applyEffects(el, rec.effects);
+      refreshLayers();
     }
 
     function selectById(id){
       state.selected = id;
       const rec = state.items.find(i=>i.id===id); if(!rec){ clearSelection(); return; }
       updateElementFromRec(rec);
+      refreshLayers();
       const bb = bboxOf(rec);
       selBox.classList.remove('hidden');
       for(const k in handles) handles[k].classList.toggle('hidden', rec.type==='path');
@@ -301,10 +495,11 @@
     function clearSelection(){
       state.selected = null; selBox.classList.add('hidden');
       for(const k in handles) handles[k].classList.add('hidden'); setStatus('No selection');
+      refreshLayers();
     }
 
     function positionHandles(bb){
-      const s=5;
+      const s=(handles.nw?.offsetWidth || 10) / 2;
       handles.nw.style.left = (bb.x - s) + 'px'; handles.nw.style.top = (bb.y - s) + 'px';
       handles.ne.style.left = (bb.x + bb.w - s) + 'px'; handles.ne.style.top = (bb.y - s) + 'px';
       handles.sw.style.left = (bb.x - s) + 'px'; handles.sw.style.top = (bb.y + bb.h - s) + 'px';
@@ -385,12 +580,13 @@
     window.addEventListener('keydown', (e)=>{
       if(e.key==='Delete' && state.selected){ removeSelected(); }
       if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='n'){ e.preventDefault(); resetAll(); }
+      if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='d'){ e.preventDefault(); duplicateSelected(); }
       if(e.key==='Escape'){ stage.dataset.tool=''; setStatus('Ready.'); }
     });
 
     const ui = {
       fill: $('#fill'), stroke: $('#stroke'), strokeWidth: $('#strokeWidth'), opacity: $('#opacity'),
-      textRow: $('#textRow'), textValue: $('#textValue'),
+      textRow: $('#textRow'), textValue: $('#textValue'), fontRow: $('#fontRow'), fontSize: $('#fontSize'),
       efShadow: $('#ef-shadow'), shBlur: $('#shadow-blur'), shDX: $('#shadow-dx'), shDY: $('#shadow-dy'), shColor: $('#shadow-color'),
       efBlur: $('#ef-blur'), blurRadius: $('#blur-radius'),
       efTint: $('#ef-tint'), tintColor: $('#tint-color'), tintStrength: $('#tint-strength'),
@@ -404,7 +600,11 @@
       ui.opacity.value = rec.opacity ?? 1;
       const isText = rec.type==='text';
       ui.textRow.style.display = isText ? '' : 'none';
-      if(isText) ui.textValue.value = rec.text || '';
+      ui.fontRow.style.display = isText ? '' : 'none';
+      if(isText){
+        ui.textValue.value = rec.text || '';
+        ui.fontSize.value = rec.fontSize || 28;
+      }
       const eff = rec.effects || null;
       ui.efShadow.checked = eff?.kind==='shadow';
       ui.efBlur.checked = eff?.kind==='blur';
@@ -416,7 +616,7 @@
       } else if(eff?.kind==='tint'){
         ui.tintColor.value = eff.color ?? '#ff0080'; ui.tintStrength.value = eff.strength ?? 0.6;
       }
-      ui.smartColorTool.value = (rec.type==='text' || rec.type==='path') ? (rec.stroke||'#ffffff') : (rec.fill||'#ffffff');
+      ui.smartColorTool.value = (rec.type==='text' || rec.type==='path' || rec.type==='line') ? (rec.stroke||'#ffffff') : (rec.fill||'#ffffff');
     }
 
     function updateSelected(mut){
@@ -427,11 +627,12 @@
       autosave();
     }
 
-    ui.fill.addEventListener('input', ()=> updateSelected(r=>{ if(r.type!=='text' && r.type!=='path') r.fill = ui.fill.value; }));
+    ui.fill.addEventListener('input', ()=> updateSelected(r=>{ if(r.type!=='text' && r.type!=='path' && r.type!=='line') r.fill = ui.fill.value; }));
     ui.stroke.addEventListener('input', ()=> updateSelected(r=>{ r.stroke = ui.stroke.value; }));
     ui.strokeWidth.addEventListener('input', ()=> updateSelected(r=>{ r.strokeWidth = parseFloat(ui.strokeWidth.value); }));
     ui.opacity.addEventListener('input', ()=> updateSelected(r=>{ r.opacity = parseFloat(ui.opacity.value); }));
     ui.textValue.addEventListener('input', ()=> updateSelected(r=>{ if(r.type==='text'){ r.text = ui.textValue.value; r.w = Math.max(60, r.text.length*12); } }));
+    ui.fontSize.addEventListener('input', ()=> updateSelected(r=>{ if(r.type==='text'){ r.fontSize = parseFloat(ui.fontSize.value) || 28; r.y = r.y; r.h = r.fontSize * 1.4; } }));
 
     function setEffect(kind){
       updateSelected(r=>{
@@ -493,7 +694,7 @@
     function resetAll(){
       state.items = []; state.selected=null; stage.innerHTML = '<defs id="defs"></defs>';
       selBox.classList.add('hidden'); for(const k in handles) handles[k].classList.add('hidden');
-      autosave(); setStatus('New project');
+      autosave(); refreshLayers(); setStatus('New project');
     }
 
     $('#btn-new').addEventListener('click', resetAll);
@@ -511,8 +712,77 @@
       const el = stage.querySelector(`[data-id="${id}"]`);
       el?.remove();
       state.items = state.items.filter(i=>i.id!==id);
-      clearSelection(); autosave(); setStatus('Deleted.');
+      clearSelection(); autosave(); refreshLayers(); setStatus('Deleted.');
     }
+
+    function createElementForRec(rec){
+      if(rec.type==='rect') return createSvg('rect');
+      if(rec.type==='ellipse') return createSvg('ellipse');
+      if(rec.type==='text') return createSvg('text');
+      if(rec.type==='image') return createSvg('image');
+      if(rec.type==='path' || rec.type==='triangle' || rec.type==='star') return createSvg('path');
+      if(rec.type==='line') return createSvg('line');
+      return createSvg('rect');
+    }
+
+    function duplicateSelected(){
+      const rec = state.items.find(r=>r.id===state.selected); if(!rec) return;
+      const copy = JSON.parse(JSON.stringify(rec));
+      copy.id = genId();
+      if(copy.type !== 'path'){
+        copy.x = (copy.x || 0) + 28;
+        copy.y = (copy.y || 0) + 28;
+      } else {
+        copy.d = (copy.d || '').replace(/(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g, (_, x, y)=>`${Number(x)+28} ${Number(y)+28}`);
+      }
+      const el = createElementForRec(copy);
+      el.dataset.id = copy.id;
+      stage.appendChild(el);
+      state.items.push(copy);
+      updateElementFromRec(copy);
+      selectById(copy.id);
+      autosave();
+      setStatus('Duplicated.');
+    }
+
+    function moveSelectedLayer(direction){
+      const rec = state.items.find(r=>r.id===state.selected); if(!rec) return;
+      const i = state.items.findIndex(r=>r.id===rec.id);
+      const newIndex = direction === 'front' ? state.items.length - 1 : 0;
+      if(i === newIndex) return;
+      state.items.splice(i, 1);
+      state.items.splice(newIndex, 0, rec);
+      const el = stage.querySelector(`[data-id="${rec.id}"]`);
+      if(el){
+        if(direction === 'front') stage.appendChild(el);
+        else stage.insertBefore(el, stage.querySelector('[data-id]'));
+      }
+      refreshLayers(); autosave(); setStatus(direction === 'front' ? 'Moved to front.' : 'Moved to back.');
+    }
+
+    function centerSelected(){
+      const rec = state.items.find(r=>r.id===state.selected); if(!rec || rec.type==='path') return;
+      const r = stage.getBoundingClientRect();
+      rec.x = r.width/2 - (rec.w || 0)/2;
+      rec.y = r.height/2 - (rec.h || 0)/2;
+      updateElementFromRec(rec); selectById(rec.id); autosave(); setStatus('Centered.');
+    }
+
+    $('#btn-duplicate').addEventListener('click', duplicateSelected);
+    $('#btn-bring-front').addEventListener('click', ()=> moveSelectedLayer('front'));
+    $('#btn-send-back').addEventListener('click', ()=> moveSelectedLayer('back'));
+    $('#btn-center').addEventListener('click', centerSelected);
+
+    $('#btn-mobile-tools')?.addEventListener('click', ()=> openMobilePanel('tools'));
+    $('#btn-mobile-props')?.addEventListener('click', ()=> openMobilePanel('props'));
+    $('#mobile-panel-backdrop')?.addEventListener('click', closeMobilePanels);
+    document.querySelectorAll('[data-close-panel]').forEach(btn=>{
+      btn.addEventListener('click', closeMobilePanels);
+    });
+    window.addEventListener('resize', ()=>{
+      if(!isMobileLayout()) closeMobilePanels();
+      if(state.selected) selectById(state.selected);
+    });
 
     function autosave(){ try{ localStorage.setItem('pictnart_project', serialize()); }catch{} }
     $('#btn-local-save').addEventListener('click', autosave);
@@ -522,23 +792,24 @@
       resetAll();
       (data.items||[]).forEach(rec=>{
         const id = rec.id || genId(); rec.id = id; state.items.push(rec);
-        let el;
-        if(rec.type==='rect') el = createSvg('rect');
-        if(rec.type==='ellipse') el = createSvg('ellipse');
-        if(rec.type==='text') el = createSvg('text');
-        if(rec.type==='image') el = createSvg('image');
-        if(rec.type==='path') el = createSvg('path');
+        let el = createElementForRec(rec);
         el.dataset.id = id; stage.appendChild(el);
         updateElementFromRec(rec);
       });
-      autosave(); setStatus('Project loaded');
+      refreshLayers(); autosave(); setStatus('Project loaded');
     }
 
     document.querySelectorAll('.tool[draggable="true"]').forEach(t=>{
       t.addEventListener('dragstart',(e)=>{ e.dataTransfer.setData('text/plain', t.dataset.kind); });
       t.addEventListener('click', ()=>{ const r = stage.getBoundingClientRect();
-        if(t.dataset.kind==='path'){ stage.dataset.tool='path'; setStatus('Drawing: click & drag on the canvas. Press Esc to exit.'); return; }
+        if(t.dataset.kind==='path'){
+          stage.dataset.tool='path';
+          setStatus('Drawing: drag on the canvas. Press Esc to exit.');
+          if(isMobileLayout()) closeMobilePanels();
+          return;
+        }
         addItem(t.dataset.kind, r.width/2-80, r.height/2-60); stage.dataset.tool='';
+        if(isMobileLayout()) closeMobilePanels();
       });
     });
 
@@ -566,6 +837,19 @@
       const el = e.target.closest('[data-id]'); if(el) selectById(el.dataset.id);
     });
 
+    stage.addEventListener('dblclick', (e)=>{
+      const el = e.target.closest('[data-id]'); if(!el) return;
+      const rec = state.items.find(r=>r.id===el.dataset.id);
+      if(!rec || rec.type!=='text') return;
+      const next = prompt('Edit text', rec.text || '');
+      if(next === null) return;
+      rec.text = next;
+      rec.w = Math.max(60, next.length * (rec.fontSize || 28) * .58);
+      updateElementFromRec(rec);
+      selectById(rec.id);
+      autosave();
+    });
+
     function hexToRgb(h){ const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h); if(!m) return [0,0,0];
       return [parseInt(m[1],16), parseInt(m[2],16), parseInt(m[3],16)]; }
     function colorDist(a,b){ return Math.sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2); }
@@ -573,7 +857,7 @@
     function smartSelectWith(colorHex, tol){
       const target = hexToRgb(colorHex); let best = null, bestD = Infinity;
       state.items.forEach(rec=>{
-        let c = (rec.type==='text' || rec.type==='path') ? rec.stroke : (rec.fill || rec.stroke);
+        let c = (rec.type==='text' || rec.type==='path' || rec.type==='line') ? rec.stroke : (rec.fill || rec.stroke);
         if(!c) return;
         const d = colorDist(hexToRgb(c), target);
         if(d < bestD && d <= tol){ bestD = d; best = rec; }
@@ -586,11 +870,28 @@
       const color = $('#smart-color-tool').value;
       const tol = parseInt($('#smart-tol-tool').value,10);
       smartSelectWith(color, tol);
+      if(isMobileLayout() && state.selected) closeMobilePanels();
     });
 
-    addItem('rect', 200, 130);
-    addItem('ellipse', 520, 180);
-    addItem('text', 280, 380);
+    const demoBounds = stage.getBoundingClientRect();
+    const demoCardWidth = Math.min(330, Math.max(230, demoBounds.width - 56));
+    const demoCardHeight = Math.min(210, Math.max(155, demoBounds.height - 170));
+    const demoCardX = Math.max(24, demoBounds.width/2 - demoCardWidth/2);
+    const demoCardY = Math.max(44, demoBounds.height/2 - demoCardHeight/2);
+
+    const demoCard = addItem('rect', demoCardX, demoCardY);
+    demoCard.fill = '#ffffff'; demoCard.stroke = '#0f172a'; demoCard.w = demoCardWidth; demoCard.h = demoCardHeight; demoCard.rx = 28; demoCard.ry = 28;
+    demoCard.effects = {kind:'shadow', blur:18, dx:12, dy:16, color:'#0f172a', opacity:.35}; updateElementFromRec(demoCard);
+
+    const demoSunSize = Math.min(150, Math.max(86, demoCardWidth * .38));
+    const demoSun = addItem('star', demoCardX + demoCardWidth - demoSunSize * .55, Math.max(18, demoCardY - demoSunSize * .32));
+    demoSun.fill = '#facc15'; demoSun.stroke = '#f97316'; demoSun.w = demoSunSize; demoSun.h = demoSunSize; demoSun.strokeWidth = 4; updateElementFromRec(demoSun);
+
+    const demoTitle = addItem('text', demoCardX + 28, demoCardY + demoCardHeight * .58);
+    demoTitle.text = isMobileLayout() ? 'Draw here' : 'Make a poster';
+    demoTitle.stroke = '#0f172a';
+    demoTitle.fontSize = Math.min(38, Math.max(28, demoCardWidth / 8.8));
+    updateElementFromRec(demoTitle);
 
     /* ===== 3-click Export PNG flow (robust wiring) ===== */
     const OPENSEA_COLLECTION_URL = "https://opensea.io/collection/loufis-art";
