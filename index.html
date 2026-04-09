@@ -75,7 +75,7 @@
     .layer.selected{border-color:#67e8f9; background:#13233d}
     .layer small{color:var(--muted); text-transform:capitalize}
     .mini-actions{display:grid; grid-template-columns:1fr 1fr; gap:8px}
-    .mobile-panel-btn,.mobile-panel-close,.mobile-panel-backdrop{display:none}
+    .mobile-panel-btn,.mobile-panel-close,.mobile-panel-backdrop,.mobile-canvas-dock,.mobile-selection-bar,.mobile-finger-hint{display:none}
 
     @media (max-width:900px){
       html,body{height:100%; height:100dvh}
@@ -131,6 +131,90 @@
       .handle{width:22px; height:22px; border-width:4px}
       .selected-box{border-width:2px}
       .modal-content{max-height:88dvh; overflow:auto}
+      .mobile-canvas-dock{
+        display:flex;
+        position:absolute;
+        left:10px;
+        right:10px;
+        bottom:10px;
+        z-index:90;
+        gap:7px;
+        padding:8px;
+        border:1px solid rgba(237,242,247,.22);
+        border-radius:26px;
+        background:rgba(5,10,20,.78);
+        backdrop-filter:blur(16px);
+        box-shadow:0 18px 44px rgba(0,0,0,.38);
+      }
+      .mobile-canvas-dock .btn{
+        flex:1;
+        min-width:0;
+        padding:9px 6px;
+        min-height:50px;
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+        align-items:center;
+        gap:2px;
+        font-size:11px;
+        line-height:1.05;
+      }
+      .mobile-canvas-dock .btn strong{font-size:18px; line-height:1}
+      .mobile-canvas-dock .btn.active{
+        background:linear-gradient(135deg,#16a34a,#0891b2);
+        border-color:transparent;
+      }
+      .mobile-selection-bar{
+        display:flex;
+        position:absolute;
+        left:10px;
+        right:10px;
+        top:10px;
+        z-index:95;
+        align-items:center;
+        gap:7px;
+        padding:8px;
+        border:1px solid rgba(96,165,250,.36);
+        border-radius:24px;
+        background:rgba(5,10,20,.82);
+        backdrop-filter:blur(16px);
+        box-shadow:0 16px 42px rgba(0,0,0,.35);
+      }
+      .mobile-selection-bar.hidden{display:none}
+      .mobile-selection-label{
+        flex:1;
+        min-width:0;
+        overflow:hidden;
+        text-overflow:ellipsis;
+        white-space:nowrap;
+        color:#dbeafe;
+        font-size:12px;
+        font-weight:800;
+        letter-spacing:.04em;
+        text-transform:uppercase;
+      }
+      .mobile-selection-bar .btn{
+        min-height:40px;
+        padding:8px 10px;
+        border-radius:16px;
+        font-size:12px;
+      }
+      .mobile-finger-hint{
+        display:block;
+        position:absolute;
+        left:16px;
+        top:16px;
+        z-index:40;
+        max-width:230px;
+        padding:10px 12px;
+        border-radius:18px;
+        background:rgba(255,255,255,.9);
+        color:#334155;
+        font-weight:800;
+        box-shadow:0 12px 32px rgba(15,23,42,.18);
+        pointer-events:none;
+      }
+      .mobile-finger-hint.hidden{display:none}
     }
   </style>
 </head>
@@ -198,6 +282,20 @@
         <div id="h-ne" class="handle hidden"></div>
         <div id="h-sw" class="handle hidden"></div>
         <div id="h-se" class="handle hidden"></div>
+        <div id="mobileFingerHint" class="mobile-finger-hint">Un doigt pour dessiner ou déplacer. Poignées vertes pour agrandir.</div>
+        <div id="mobileSelectionBar" class="mobile-selection-bar hidden">
+          <div id="mobileSelectionLabel" class="mobile-selection-label">Selection</div>
+          <button class="btn" id="mobile-btn-duplicate" type="button">Copier</button>
+          <button class="btn" id="mobile-btn-front" type="button">Devant</button>
+          <button class="btn" id="mobile-btn-delete" type="button">✕</button>
+        </div>
+        <div class="mobile-canvas-dock" aria-label="Mobile drawing shortcuts">
+          <button class="btn" id="mobile-quick-brush" type="button"><strong>✏</strong><span>Dessin</span></button>
+          <button class="btn" id="mobile-quick-shape" type="button"><strong>▭</strong><span>Forme</span></button>
+          <button class="btn" id="mobile-quick-text" type="button"><strong>T</strong><span>Texte</span></button>
+          <button class="btn" id="mobile-quick-image" type="button"><strong>🖼</strong><span>Photo</span></button>
+          <button class="btn" id="mobile-quick-edit" type="button"><strong>⚙</strong><span>Edit</span></button>
+        </div>
       </div>
     </main>
 
@@ -279,6 +377,10 @@
     const status = $('#status');
     const wrap = $('#stage-wrap');
     const layersEl = $('#layers');
+    const mobileSelectionBar = $('#mobileSelectionBar');
+    const mobileSelectionLabel = $('#mobileSelectionLabel');
+    const mobileFingerHint = $('#mobileFingerHint');
+    const mobileQuickBrush = $('#mobile-quick-brush');
 
     let uid = 1;
     const genId = (pfx='item') => `${pfx}-${uid++}`;
@@ -298,6 +400,45 @@
     function openMobilePanel(panel){
       document.body.classList.toggle('show-tools', panel === 'tools');
       document.body.classList.toggle('show-props', panel === 'props');
+    }
+
+    function updateMobileQuickState(){
+      mobileQuickBrush?.classList.toggle('active', stage.dataset.tool === 'path');
+    }
+
+    function setBrushMode(active){
+      stage.dataset.tool = active ? 'path' : '';
+      updateMobileQuickState();
+      if(active){
+        hideMobileFingerHint();
+        setStatus('Brush: dessinez directement avec le doigt. Retouchez "Dessin" pour arrêter.');
+      } else {
+        setStatus('Ready.');
+      }
+    }
+
+    function hideMobileFingerHint(){
+      mobileFingerHint?.classList.add('hidden');
+    }
+
+    function renderMobileSelectionBar(rec=null){
+      if(!mobileSelectionBar) return;
+      const selected = rec || state.items.find(i=>i.id===state.selected);
+      mobileSelectionBar.classList.toggle('hidden', !selected);
+      if(mobileSelectionLabel && selected){
+        mobileSelectionLabel.textContent = itemLabel(selected);
+      }
+      if(mobileFingerHint){
+        const showHint = isMobileLayout() && !selected && !state.items.length && stage.dataset.tool !== 'path';
+        mobileFingerHint.classList.toggle('hidden', !showHint);
+      }
+    }
+
+    function addMobileItem(kind){
+      const r = stage.getBoundingClientRect();
+      const rec = addItem(kind, r.width/2-90, r.height/2-70);
+      hideMobileFingerHint();
+      return rec;
     }
 
     function itemLabel(rec){
@@ -489,6 +630,8 @@
       selBox.style.width = bb.w + 'px'; selBox.style.height = bb.h + 'px';
       positionHandles(bb);
       syncUI(rec);
+      renderMobileSelectionBar(rec);
+      hideMobileFingerHint();
       setStatus(`Selected: ${rec.type} (${Math.round(bb.x)}, ${Math.round(bb.y)})`);
     }
 
@@ -496,6 +639,7 @@
       state.selected = null; selBox.classList.add('hidden');
       for(const k in handles) handles[k].classList.add('hidden'); setStatus('No selection');
       refreshLayers();
+      renderMobileSelectionBar(null);
     }
 
     function positionHandles(bb){
@@ -509,8 +653,10 @@
     let drag = null;
 
     stage.addEventListener('pointerdown', (e)=>{
+      hideMobileFingerHint();
       const toolIsDraw = stage.dataset.tool==='path';
       if(toolIsDraw){
+        stage.setPointerCapture?.(e.pointerId);
         const r = stage.getBoundingClientRect();
         const x = e.clientX - r.left; const y = e.clientY - r.top;
         const rec = addItem('path'); rec.stroke = ui.stroke.value; rec.strokeWidth = parseFloat(ui.strokeWidth.value);
@@ -581,7 +727,7 @@
       if(e.key==='Delete' && state.selected){ removeSelected(); }
       if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='n'){ e.preventDefault(); resetAll(); }
       if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='d'){ e.preventDefault(); duplicateSelected(); }
-      if(e.key==='Escape'){ stage.dataset.tool=''; setStatus('Ready.'); }
+      if(e.key==='Escape'){ setBrushMode(false); }
     });
 
     const ui = {
@@ -624,6 +770,7 @@
       mut(rec); updateElementFromRec(rec);
       const bb = bboxOf(rec);
       selBox.style.left = bb.x+'px'; selBox.style.top = bb.y+'px'; selBox.style.width = bb.w+'px'; selBox.style.height = bb.h+'px'; positionHandles(bb);
+      renderMobileSelectionBar(rec);
       autosave();
     }
 
@@ -692,9 +839,10 @@
     }
 
     function resetAll(){
+      setBrushMode(false);
       state.items = []; state.selected=null; stage.innerHTML = '<defs id="defs"></defs>';
       selBox.classList.add('hidden'); for(const k in handles) handles[k].classList.add('hidden');
-      autosave(); refreshLayers(); setStatus('New project');
+      autosave(); refreshLayers(); renderMobileSelectionBar(null); setStatus('New project');
     }
 
     $('#btn-new').addEventListener('click', resetAll);
@@ -775,6 +923,32 @@
 
     $('#btn-mobile-tools')?.addEventListener('click', ()=> openMobilePanel('tools'));
     $('#btn-mobile-props')?.addEventListener('click', ()=> openMobilePanel('props'));
+    $('#mobile-quick-brush')?.addEventListener('click', ()=>{
+      setBrushMode(stage.dataset.tool !== 'path');
+      closeMobilePanels();
+    });
+    $('#mobile-quick-shape')?.addEventListener('click', ()=>{
+      setBrushMode(false);
+      addMobileItem('rect');
+      closeMobilePanels();
+    });
+    $('#mobile-quick-text')?.addEventListener('click', ()=>{
+      setBrushMode(false);
+      const rec = addMobileItem('text');
+      rec.text = 'Votre texte';
+      rec.w = 180;
+      updateElementFromRec(rec);
+      selectById(rec.id);
+      openMobilePanel('props');
+    });
+    $('#mobile-quick-image')?.addEventListener('click', ()=>{
+      setBrushMode(false);
+      $('#img-input')?.click();
+    });
+    $('#mobile-quick-edit')?.addEventListener('click', ()=> openMobilePanel('props'));
+    $('#mobile-btn-duplicate')?.addEventListener('click', duplicateSelected);
+    $('#mobile-btn-front')?.addEventListener('click', ()=> moveSelectedLayer('front'));
+    $('#mobile-btn-delete')?.addEventListener('click', removeSelected);
     $('#mobile-panel-backdrop')?.addEventListener('click', closeMobilePanels);
     document.querySelectorAll('[data-close-panel]').forEach(btn=>{
       btn.addEventListener('click', closeMobilePanels);
@@ -782,6 +956,8 @@
     window.addEventListener('resize', ()=>{
       if(!isMobileLayout()) closeMobilePanels();
       if(state.selected) selectById(state.selected);
+      else renderMobileSelectionBar(null);
+      updateMobileQuickState();
     });
 
     function autosave(){ try{ localStorage.setItem('pictnart_project', serialize()); }catch{} }
@@ -803,12 +979,11 @@
       t.addEventListener('dragstart',(e)=>{ e.dataTransfer.setData('text/plain', t.dataset.kind); });
       t.addEventListener('click', ()=>{ const r = stage.getBoundingClientRect();
         if(t.dataset.kind==='path'){
-          stage.dataset.tool='path';
-          setStatus('Drawing: drag on the canvas. Press Esc to exit.');
+          setBrushMode(true);
           if(isMobileLayout()) closeMobilePanels();
           return;
         }
-        addItem(t.dataset.kind, r.width/2-80, r.height/2-60); stage.dataset.tool='';
+        addItem(t.dataset.kind, r.width/2-80, r.height/2-60); stage.dataset.tool=''; updateMobileQuickState();
         if(isMobileLayout()) closeMobilePanels();
       });
     });
@@ -825,9 +1000,12 @@
       const f = e.target.files[0]; if(!f) return;
       const reader = new FileReader();
       reader.onload = ()=>{
-        addItem('image', 360, 200);
+        if(isMobileLayout()) addMobileItem('image');
+        else addItem('image', 360, 200);
         const rec = state.items.find(r=>r.id===state.selected);
         rec.imgHref = reader.result; updateElementFromRec(rec); autosave();
+        hideMobileFingerHint();
+        closeMobilePanels();
       };
       reader.readAsDataURL(f); e.target.value='';
     });
@@ -980,4 +1158,3 @@
   </script>
 </body>
 </html>
-
