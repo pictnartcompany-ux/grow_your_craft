@@ -75,22 +75,25 @@
     .layer.selected{border-color:#67e8f9; background:#13233d}
     .layer small{color:var(--muted); text-transform:capitalize}
     .mini-actions{display:grid; grid-template-columns:1fr 1fr; gap:8px}
-    .mobile-panel-btn,.mobile-panel-close,.mobile-panel-backdrop,.mobile-canvas-dock,.mobile-selection-bar,.mobile-finger-hint{display:none}
+    .desktop-action{}
+    .mobile-panel-btn,.mobile-panel-close,.mobile-panel-backdrop,.mobile-canvas-dock,.mobile-selection-bar,.mobile-finger-hint,.mobile-app-btn,.mobile-app-menu{display:none}
 
     @media (max-width:900px){
       html,body{height:100%; height:100dvh}
       body{overscroll-behavior:none}
       .app{grid-template-columns:1fr; grid-template-rows:auto minmax(0,1fr) auto; height:100dvh}
-      header{grid-column:1; align-items:flex-start; flex-direction:column; padding:10px 12px; gap:10px}
-      header .actions{width:100%; flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch}
-      header .actions .btn{flex:0 0 auto; min-height:42px; white-space:nowrap}
-      header .brand{font-size:15px}
-      .mobile-panel-btn{display:inline-flex}
+      header{grid-column:1; align-items:center; justify-content:space-between; flex-direction:row; padding:10px 12px; gap:10px}
+      header .actions{width:auto; display:flex; flex-wrap:nowrap; gap:8px}
+      header .actions .btn{min-height:42px; white-space:nowrap}
+      header .brand{font-size:14px; min-width:0; max-width:calc(100vw - 236px); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+      header .brand .badge{display:none}
+      .desktop-action{display:none !important}
+      .mobile-panel-btn,.mobile-app-btn{display:inline-flex; align-items:center; justify-content:center}
       .canvas-wrap{grid-row:2; padding:10px; min-height:0}
       .stage{border-radius:22px; touch-action:none}
       svg#stage{touch-action:none}
       .statusbar{grid-column:1; grid-row:3; padding:8px 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-      .sidebar,.props{
+      .sidebar,.props,.mobile-app-menu{
         position:fixed;
         left:10px; right:10px; bottom:10px;
         z-index:1200;
@@ -103,7 +106,8 @@
         box-shadow:0 34px 80px rgba(0,0,0,.48);
       }
       body.show-tools .sidebar,
-      body.show-props .props{transform:translateY(0)}
+      body.show-props .props,
+      body.show-app-menu .mobile-app-menu{transform:translateY(0)}
       .mobile-panel-close{
         display:flex;
         width:100%;
@@ -120,7 +124,30 @@
         backdrop-filter:blur(6px);
       }
       body.show-tools .mobile-panel-backdrop,
-      body.show-props .mobile-panel-backdrop{display:block}
+      body.show-props .mobile-panel-backdrop,
+      body.show-app-menu .mobile-panel-backdrop{display:block}
+      .mobile-app-menu{
+        display:block;
+        padding:14px;
+      }
+      .mobile-app-grid{
+        display:grid;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:10px;
+      }
+      .mobile-app-grid .btn{
+        min-height:52px;
+        border-radius:18px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        text-align:center;
+      }
+      .mobile-app-note{
+        margin-top:12px;
+        color:var(--muted);
+        font-size:12px;
+      }
       .tool-list{grid-template-columns:repeat(4,minmax(72px,1fr)); overflow-x:auto; padding-bottom:4px}
       .tool{min-height:92px; font-size:12px}
       .tool .icon{width:44px; height:44px}
@@ -225,12 +252,13 @@
       <div class="actions">
         <button class="btn mobile-panel-btn" id="btn-mobile-tools" type="button">Tools</button>
         <button class="btn mobile-panel-btn" id="btn-mobile-props" type="button">Edit</button>
-        <button class="btn" id="btn-new" title="Reset (⌘/Ctrl+N)">New</button>
-        <button class="btn" id="btn-load">Open a project</button>
-        <button class="btn" id="btn-save">Save project (.json)</button>
-        <button class="btn" id="btn-delete">Delete</button>
-        <button class="btn primary" id="export-btn">Export PNG</button>
-        <button class="btn ghost" id="btn-export-svg">Export SVG</button>
+        <button class="btn mobile-app-btn" id="btn-mobile-menu" type="button">Menu</button>
+        <button class="btn desktop-action" id="btn-new" title="Reset (⌘/Ctrl+N)">New</button>
+        <button class="btn desktop-action" id="btn-load">Open a project</button>
+        <button class="btn desktop-action" id="btn-save">Save project (.json)</button>
+        <button class="btn desktop-action" id="btn-delete">Delete</button>
+        <button class="btn primary desktop-action" id="export-btn">Export PNG</button>
+        <button class="btn ghost desktop-action" id="btn-export-svg">Export SVG</button>
       </div>
     </header>
 
@@ -355,6 +383,21 @@
       </div>
     </aside>
 
+    <div class="mobile-app-menu">
+      <button class="btn mobile-panel-close" type="button" data-close-panel>
+        <span>Menu</span><span>Close ✕</span>
+      </button>
+      <div class="mobile-app-grid">
+        <button class="btn" id="mobile-menu-new" type="button">Nouveau projet</button>
+        <button class="btn" id="mobile-menu-open" type="button">Ouvrir un projet</button>
+        <button class="btn" id="mobile-menu-save" type="button">Sauver le projet</button>
+        <button class="btn primary" id="mobile-menu-export" type="button">Exporter PNG</button>
+        <button class="btn" id="mobile-menu-svg" type="button">Exporter SVG</button>
+        <button class="btn" id="mobile-menu-restore" type="button">Restaurer local</button>
+      </div>
+      <div class="mobile-app-note">Version mobile simplifiée: l’essentiel reste dans ce menu pour garder un écran propre et entièrement visible.</div>
+    </div>
+
     <div class="statusbar" id="status">Ready.</div>
   </div>
 
@@ -394,12 +437,23 @@
     }
 
     function closeMobilePanels(){
-      document.body.classList.remove('show-tools','show-props');
+      document.body.classList.remove('show-tools','show-props','show-app-menu');
     }
 
     function openMobilePanel(panel){
       document.body.classList.toggle('show-tools', panel === 'tools');
       document.body.classList.toggle('show-props', panel === 'props');
+      document.body.classList.remove('show-app-menu');
+    }
+
+    function openMobileMenu(){
+      document.body.classList.remove('show-tools','show-props');
+      document.body.classList.toggle('show-app-menu');
+    }
+
+    function triggerButton(id){
+      document.getElementById(id)?.click();
+      closeMobilePanels();
     }
 
     function updateMobileQuickState(){
@@ -923,6 +977,7 @@
 
     $('#btn-mobile-tools')?.addEventListener('click', ()=> openMobilePanel('tools'));
     $('#btn-mobile-props')?.addEventListener('click', ()=> openMobilePanel('props'));
+    $('#btn-mobile-menu')?.addEventListener('click', openMobileMenu);
     $('#mobile-quick-brush')?.addEventListener('click', ()=>{
       setBrushMode(stage.dataset.tool !== 'path');
       closeMobilePanels();
@@ -949,6 +1004,12 @@
     $('#mobile-btn-duplicate')?.addEventListener('click', duplicateSelected);
     $('#mobile-btn-front')?.addEventListener('click', ()=> moveSelectedLayer('front'));
     $('#mobile-btn-delete')?.addEventListener('click', removeSelected);
+    $('#mobile-menu-new')?.addEventListener('click', ()=> triggerButton('btn-new'));
+    $('#mobile-menu-open')?.addEventListener('click', ()=> triggerButton('btn-load'));
+    $('#mobile-menu-save')?.addEventListener('click', ()=> triggerButton('btn-save'));
+    $('#mobile-menu-export')?.addEventListener('click', ()=> triggerButton('export-btn'));
+    $('#mobile-menu-svg')?.addEventListener('click', ()=> triggerButton('btn-export-svg'));
+    $('#mobile-menu-restore')?.addEventListener('click', ()=> triggerButton('btn-local-load'));
     $('#mobile-panel-backdrop')?.addEventListener('click', closeMobilePanels);
     document.querySelectorAll('[data-close-panel]').forEach(btn=>{
       btn.addEventListener('click', closeMobilePanels);
